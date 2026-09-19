@@ -4,3 +4,6 @@ backgroundColor = "#0B0F1A"
 secondaryBackgroundColor = "#141A2B"
 textColor = "#E8EAF0"
 primaryColor = "#34E7B4"
+
+[server]
+port = 8080
