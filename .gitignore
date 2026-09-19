@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+Optional_Items/Rail_Corrugation/Test
+Optional_Items/Rail_Corrugation/Train
+Optional_Items/Rail_Corrugation/Train_Labels.csv
+Optional_Items/Rail_Corrugation/rail_features_final.csv
+Optional_Items/Rail_Corrugation/rail_features_test_final.csv
+Optional_Items/Rail_Corrugation/archive/
