@@ -1,61 +1,68 @@
+from functools import lru_cache
 from pathlib import Path
 
 import joblib
 
-from services.mock_model import MockModel
+from services.door_model import DoorModel
 from services.rail_corrugation_model import RailCorrugationModel
+from services.shm_model import SHMModel
 
 
 _MODEL_DIR = Path(__file__).resolve().parent.parent / "model_store"
 
-
-# looks for either the key name or the older *_model filename
-def _find(key):
-    candidates = [
-        _MODEL_DIR / f"{key}.joblib",
-        _MODEL_DIR / f"{key}_model.joblib",
-        _MODEL_DIR / f"{key}.pt",
-        _MODEL_DIR / f"{key}_model.pt",
-    ]
-
-    for path in candidates:
-        if path.exists():
-            return path
-
-    return None
+_MODEL_FILES = {
+    "door": "door_model.joblib",
+    "rail_corrugation": "rail_corrugation_model.joblib",
+    "shm": "shm_model.joblib",
+}
 
 
-# loads the real rail wrapper while leaving the other subsystem flow unchanged
-def load(subsystem):
-    path = _find(subsystem.key)
+# loads each saved artifact once and wraps it with the right app interface
+@lru_cache(maxsize=None)
+def _load_model(key):
+    if key not in _MODEL_FILES:
+        raise ValueError(
+            f"unsupported subsystem: {key}"
+        )
 
-    if path is None:
-        if subsystem.key == "rail_corrugation":
-            raise FileNotFoundError(
-                "rail corrugation model not found in model_store"
-            )
-        return MockModel(subsystem)
+    path = _MODEL_DIR / _MODEL_FILES[key]
 
-    if path.suffix == ".joblib":
-        try:
-            loaded = joblib.load(path)
-        except Exception as exc:
-            raise RuntimeError(
-                f"failed to load model: {path.name}"
-            ) from exc
-
-        if subsystem.key == "rail_corrugation":
-            return RailCorrugationModel(loaded)
-
-        return loaded
+    if not path.exists():
+        raise FileNotFoundError(
+            f"model not found: {path.name}"
+        )
 
     try:
-        import torch
-        return torch.load(
-            path,
-            map_location="cpu",
+        loaded = joblib.load(
+            path
         )
     except Exception as exc:
         raise RuntimeError(
             f"failed to load model: {path.name}"
         ) from exc
+
+    if key == "door":
+        return DoorModel(
+            loaded
+        )
+
+    if key == "rail_corrugation":
+        return RailCorrugationModel(
+            loaded
+        )
+
+    if key == "shm":
+        return SHMModel(
+            loaded
+        )
+
+    raise ValueError(
+        f"unsupported subsystem: {key}"
+    )
+
+
+# keeps the controller interface unchanged
+def load(subsystem):
+    return _load_model(
+        subsystem.key
+    )
